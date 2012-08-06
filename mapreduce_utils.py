@@ -34,9 +34,9 @@ class KeyRange(key_range.KeyRange):
                    order=None):
         """Return a db.Query from provided params"""
         if ndb is not None:
-          if issubclass(kind_class, ndb.Model):
-            return self.make_ascending_ndb_query(
-                kind_class, keys_only=keys_only, filters=filters)
+            if issubclass(kind_class, ndb.Model):
+                return self.make_ascending_ndb_query(
+                    kind_class, keys_only=keys_only, filters=filters)
         assert self._app is None, '_app is not supported for db.Query'
         query = db.Query(kind_class, namespace=self.namespace,
                          keys_only=keys_only)
