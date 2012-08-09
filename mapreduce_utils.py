@@ -75,17 +75,17 @@ class KeyRange(key_range.KeyRange):
 
     @classmethod
     def from_json(cls, json_str):
-
-        """mapreduce.lib.KeyRange.from json is staticmethod
+        """mapreduce.lib.KeyRange.from_json is staticmethod
         with harcoded class...
 
         Deserialize KeyRange from its json representation.
 
         Args:
-          json_str: string with json representation created by key_range_to_json.
+            json_str: string with json representation created by
+            key_range_to_json.
 
         Returns:
-          deserialized KeyRange instance.
+            deserialized KeyRange instance.
         """
         def key_from_str(key_str):
             if key_str:
@@ -95,12 +95,13 @@ class KeyRange(key_range.KeyRange):
 
         json = simplejson.loads(json_str)
         return cls(key_from_str(json["key_start"]),
-                        key_from_str(json["key_end"]),
-                        json["direction"],
-                        json["include_start"],
-                        json["include_end"],
-                        json.get("namespace"),
-                        _app=json.get("_app"))
+            key_from_str(
+                json["key_end"]),
+                json["direction"],
+                json["include_start"],
+                json["include_end"],
+                json.get("namespace"),
+                _app=json.get("_app"))
 
 
 class DatastoreQueryInputReader(AbstractDatastoreInputReader):

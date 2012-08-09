@@ -61,14 +61,17 @@ class DatastoreQueryInputReaderTest(unittest.TestCase):
         mapper_spec = model.MapperSpec(
             "FooHandler",
             "mapreduce_utils.DatastoreQueryInputReader",
-            {"entity_kind": self.TEST_ENTITY_IMPORT_PATH},
+            {
+                "input_reader": {
+                    "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                }
+            },
             SHARD_COUNT)
 
         ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
         got = reduce(operator.add,
             (list(reader) for reader in ds_input_readers))
         self.assertEqual(len(self.dataSet), len(got))
-
 
     def test_split_input(self):
         SHARD_COUNT = 10
@@ -77,45 +80,53 @@ class DatastoreQueryInputReaderTest(unittest.TestCase):
             "FooHandler",
             "mapreduce_utils.DatastoreQueryInputReader",
             {
-                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
-                "batch_size": BATCH_SIZE,
+                "input_reader": {
+                    "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                    "batch_size": BATCH_SIZE,
+                }
             },
             SHARD_COUNT)
 
         def num_expected():
             batch_size = min(len(self.dataSet), BATCH_SIZE)
-            free_division = abs(len(self.dataSet)/batch_size)
+            free_division = abs(len(self.dataSet) / batch_size)
             return min(free_division, SHARD_COUNT)
 
         ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
-        self.assertEqual(num_expected(), len(ds_input_readers))
+        self.assertEqual(3, num_expected())  # 1-3, 3-5, 5-None
+        self.assertEqual(3, len(ds_input_readers))
 
         # batch_size = dataSet bigger half
-        BATCH_SIZE = int(math.ceil(len(self.dataSet)/2.0))
+        BATCH_SIZE = int(math.ceil(len(self.dataSet) / 2.0))
         mapper_spec = model.MapperSpec(
             "FooHandler",
             "mapreduce_utils.DatastoreQueryInputReader",
             {
-                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
-                "batch_size": BATCH_SIZE,
+                "input_reader": {
+                    "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                    "batch_size": BATCH_SIZE,
+                }
             },
             SHARD_COUNT)
         ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
-        self.assertEqual(num_expected(), len(ds_input_readers))
+        self.assertEqual(2, num_expected())  # 1-4, 4-None
+        self.assertEqual(2, len(ds_input_readers))
 
         # batch_size > dataSet itself
-        BATCH_SIZE = int(len(self.dataSet)+10)
+        BATCH_SIZE = len(self.dataSet) * 2
         mapper_spec = model.MapperSpec(
             "FooHandler",
             "mapreduce_utils.DatastoreQueryInputReader",
             {
-                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
-                "batch_size": BATCH_SIZE,
+                "input_reader": {
+                    "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                    "batch_size": BATCH_SIZE,
+                }
             },
             SHARD_COUNT)
         ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
-        self.assertEqual(num_expected(), len(ds_input_readers))
-
+        self.assertEqual(1, num_expected())  # 1-None
+        self.assertEqual(1, len(ds_input_readers))
 
     def test_with_query_filters(self):
         SHARD_COUNT = 10
@@ -123,8 +134,10 @@ class DatastoreQueryInputReaderTest(unittest.TestCase):
             "FooHandler",
             "mapreduce_utils.DatastoreQueryInputReader",
             {
-                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
-                "filters": [("type", "=", "C")],
+                "input_reader": {
+                    "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                    "filters": [("type", "=", "C")],
+                }
             },
             SHARD_COUNT)
 
@@ -145,10 +158,12 @@ class DatastoreQueryInputReaderTest(unittest.TestCase):
             "simple_parametrized_filter_factory"
 
         params = {
-            "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
-            "filter_factory_spec": {
-                "name": FF_PATH,
-                "args": ["B"]
+            "input_reader": {
+                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                "filter_factory_spec": {
+                    "name": FF_PATH,
+                    "args": ["B"]
+                }
             }
         }
         mapper_spec = model.MapperSpec(
@@ -209,18 +224,3 @@ class KeyRangeTest(unittest.TestCase):
         self.assertEqual(2, len(got))
         self.assertDictEqual(data1, db.to_dict(got.pop(0)))
         self.assertDictEqual(data2, db.to_dict(got.pop(0)))
-
-    @unittest.skip('TODO')
-    def test_passed_wrong_kind(self):
-        self.fail()
-#        self.assertRaises(BadReaderParamsError,
-#                          TTM.mapreduce_utils._build_query,
-#                          kind=u"ModelClassName")
-#        self.assertRaises(BadReaderParamsError,
-#                          TTM.mapreduce_utils._build_query,
-#                          kind="ModelClassName")
-#        self.assertRaises(BadReaderParamsError,
-#                          TTM.mapreduce_utils._build_query,
-#                          kind="")
-#        self.assertRaises(BadReaderParamsError,
-#                          TTM.mapreduce_utils._build_query)
