@@ -1,6 +1,7 @@
 import os
 import sys
 import operator
+import math
 
 import unittest2 as unittest
 from google.appengine.ext import db
@@ -67,6 +68,54 @@ class DatastoreQueryInputReaderTest(unittest.TestCase):
         got = reduce(operator.add,
             (list(reader) for reader in ds_input_readers))
         self.assertEqual(len(self.dataSet), len(got))
+
+
+    def test_split_input(self):
+        SHARD_COUNT = 10
+        BATCH_SIZE = 2
+        mapper_spec = model.MapperSpec(
+            "FooHandler",
+            "mapreduce_utils.DatastoreQueryInputReader",
+            {
+                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                "batch_size": BATCH_SIZE,
+            },
+            SHARD_COUNT)
+
+        def num_expected():
+            batch_size = min(len(self.dataSet), BATCH_SIZE)
+            free_division = abs(len(self.dataSet)/batch_size)
+            return min(free_division, SHARD_COUNT)
+
+        ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
+        self.assertEqual(num_expected(), len(ds_input_readers))
+
+        # batch_size = dataSet bigger half
+        BATCH_SIZE = int(math.ceil(len(self.dataSet)/2.0))
+        mapper_spec = model.MapperSpec(
+            "FooHandler",
+            "mapreduce_utils.DatastoreQueryInputReader",
+            {
+                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                "batch_size": BATCH_SIZE,
+            },
+            SHARD_COUNT)
+        ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
+        self.assertEqual(num_expected(), len(ds_input_readers))
+
+        # batch_size > dataSet itself
+        BATCH_SIZE = int(len(self.dataSet)+10)
+        mapper_spec = model.MapperSpec(
+            "FooHandler",
+            "mapreduce_utils.DatastoreQueryInputReader",
+            {
+                "entity_kind": self.TEST_ENTITY_IMPORT_PATH,
+                "batch_size": BATCH_SIZE,
+            },
+            SHARD_COUNT)
+        ds_input_readers = DatastoreQueryInputReader.split_input(mapper_spec)
+        self.assertEqual(num_expected(), len(ds_input_readers))
+
 
     def test_with_query_filters(self):
         SHARD_COUNT = 10

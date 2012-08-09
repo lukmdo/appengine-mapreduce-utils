@@ -197,6 +197,7 @@ class DatastoreQueryInputReader(AbstractDatastoreInputReader):
 
     @classmethod
     def split_input(cls, mapper_spec):
+        ### init params
         params = _get_params(mapper_spec)
         entity_kind_name = params.pop(cls.ENTITY_KIND_PARAM)
         batch_size = int(params.get(cls.BATCH_SIZE_PARAM, cls._BATCH_SIZE))
@@ -210,17 +211,18 @@ class DatastoreQueryInputReader(AbstractDatastoreInputReader):
         splitter_query = KeyRange().make_ascending_query(
             entity_kind, keys_only=True, filters=filters)
 
-        key_begin_iter = itertools.islice(splitter_query, None, None,
-                                          batch_size)
-        key_ranges = defaultdict(list)
-        key_begin = py5to7.next(key_begin_iter, None)
-        for (i, key) in enumerate(key_begin_iter):
-            key_ranges[i % shard_count].append(
-                KeyRange(key_begin, key, include_end=False))
-            key_begin = py5to7.next(key_begin_iter, None)
+        k_begin_iter, k_end_iter = itertools.tee(
+            itertools.islice(splitter_query, None, None, batch_size))
 
-        if key_begin and not key_ranges:
-            key_ranges[0] = [KeyRange(key_begin, None, include_end=False)]
+        # because include_end=None the last pair one should be (key, None)
+        # for that reason pop one from begining and add None to the end
+        py5to7.next(k_end_iter, None)
+        k_end_iter = itertools.chain(k_end_iter, [None])
+
+        key_ranges = defaultdict(list)
+        for (i, keys) in enumerate(itertools.izip(k_begin_iter, k_end_iter)):
+            key_ranges[i % shard_count].append(
+                KeyRange(keys[0], keys[1], include_end=False))
 
         return [cls(entity_kind_name,
                     key_ranges=k,
